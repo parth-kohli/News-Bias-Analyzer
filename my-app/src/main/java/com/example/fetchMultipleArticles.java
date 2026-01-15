@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class fetchMultipleArticles {
-    private static final String API_KEY = "273f886cd7b0434eaf76f112fd6b05fe"; // Use your own API key
+    private static final String API_KEY = "e8efcdd3703b4e58b9b3f207e4591d95"; // Use your own API key
     private static final String CACHE_FILE = "cached_articles"+LocalDate.now().toString()+".json";
     private static final HttpClient client = HttpClient.newHttpClient();
     private static final Set<String> STOP_WORDS = Set.of("a", "an", "the", "in", "on", "at", "for", "with", "is", "are", "was", "were", "to", "of", "and", "says", "posts", "after", "by");
