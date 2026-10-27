@@ -107,7 +107,6 @@ import com.example.myapplication.data.ViewModels.ArticlesViewModel
 import com.example.myapplication.data.ViewModels.HomeViewModel
 import com.example.myapplication.data.ViewModels.SavedViewModel
 import com.example.myapplication.data.ViewModels.SearchViewModel
-import com.example.myapplication.data.allNewsArticles
 import com.example.myapplication.data.room.UserSettings
 import com.example.myapplication.response.NewsArticle
 import com.example.myapplication.screens.ArticleScreen
@@ -230,7 +229,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
                                 uriPattern = "newsapp://article/{articleId}"
                                 action = Intent.ACTION_VIEW
                             }),
-                        arguments = listOf(navArgument("articleId") { type = NavType.IntType }),
+                        arguments = listOf(navArgument("articleId") { type = NavType.StringType }),
 
                             enterTransition = {
                                 slideInHorizontally(
@@ -258,7 +257,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
                             }
 
                     ) { backStackEntry ->
-                        val articleId = backStackEntry.arguments?.getInt("articleId")
+                        val articleId = backStackEntry.arguments?.getString("articleId")
                         ArticleScreen(innerPadding, articleId!!, articlesViewModel) { navController.popBackStack()} // Placeholder
                     }
                 }
@@ -403,7 +402,7 @@ fun SplashScreen(modifier :Modifier, doneLoading: () -> Unit    ){
         }
     }
     LaunchedEffect(Unit) {
-        delay(6000L)
+        delay(100L)
         doneLoading()
     }
     BoxWithConstraints(
@@ -418,7 +417,7 @@ fun SplashScreen(modifier :Modifier, doneLoading: () -> Unit    ){
 //                contentDescription = "logo",
 //                modifier = Modifier.size(width * 0.5f)
 //            )
-            Mp4LoadingAnimation(Modifier.fillMaxWidth(0.75f).aspectRatio(1f).clip(CircleShape))
+            //Mp4LoadingAnimation(Modifier.fillMaxWidth(0.75f).aspectRatio(1f).clip(CircleShape))
 
             Spacer(modifier = Modifier.height(height/900f *50))
             Text("IN NEWS", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.White)
@@ -540,44 +539,44 @@ fun PulsingShape(
     }
 }
 
-    @Composable
-    fun Mp4LoadingAnimation(modifier: Modifier = Modifier) {
-        val context = LocalContext.current
-        val exoPlayer = remember {
-            ExoPlayer.Builder(context).build().apply {
-                val mediaItem = MediaItem.fromUri(
-                    "android.resource://${context.packageName}/${R.raw.introanimation}"
-                )
-                setMediaItem(mediaItem)
-                repeatMode = Player.REPEAT_MODE_OFF
-                setPlaybackParameters(
-                    PlaybackParameters(2.0f)
-                )
-                playWhenReady = true
-                prepare()
-            }
-        }
-
-        // 5. Manage the player's lifecycle
-        DisposableEffect(Unit) {
-            onDispose {
-                exoPlayer.release()
-            }
-        }
-
-        // 6. Add the PlayerView to Compose
-        AndroidView(
-            modifier = modifier,
-            factory = {
-                PlayerView(it).apply {
-                    player = exoPlayer
-                    useController = false
-                    resizeMode= RESIZE_MODE_ZOOM
-
-                }
-            }
-        )
-    }
+//    @Composable
+//    fun Mp4LoadingAnimation(modifier: Modifier = Modifier) {
+//        val context = LocalContext.current
+//        val exoPlayer = remember {
+//            ExoPlayer.Builder(context).build().apply {
+//                val mediaItem = MediaItem.fromUri(
+//                    "android.resource://${context.packageName}/${R.raw.introanimation}"
+//                )
+//                setMediaItem(mediaItem)
+//                repeatMode = Player.REPEAT_MODE_OFF
+//                setPlaybackParameters(
+//                    PlaybackParameters(2.0f)
+//                )
+//                playWhenReady = true
+//                prepare()
+//            }
+//        }
+//
+//        // 5. Manage the player's lifecycle
+//        DisposableEffect(Unit) {
+//            onDispose {
+//                exoPlayer.release()
+//            }
+//        }
+//
+//        // 6. Add the PlayerView to Compose
+//        AndroidView(
+//            modifier = modifier,
+//            factory = {
+//                PlayerView(it).apply {
+//                    player = exoPlayer
+//                    useController = false
+//                    resizeMode= RESIZE_MODE_ZOOM
+//
+//                }
+//            }
+//        )
+//    }
 
     @Composable
     fun AppTopBar(modifier: Modifier = Modifier) {

@@ -45,7 +45,7 @@ interface NewsArticleDao {
     suspend fun searchToday(targetDate: String): List<NewsArticle>
 
     @Query("SELECT * FROM news_articles WHERE id= :id")
-    suspend fun fetchArticle(id: Int): NewsArticle?
+    suspend fun fetchArticle(id: String): NewsArticle?
 
 
 
@@ -66,7 +66,7 @@ interface BiasedArticleDao {
     suspend fun clearAll()
 
     @Query("SELECT * FROM biased_articles n WHERE n.articleId=:id ")
-    suspend fun getBiasedArticles(id: Int): List<BiasedArticles>
+    suspend fun getBiasedArticles(id: String): List<BiasedArticles>
 }
 @Dao
 interface SavedArticleDao {

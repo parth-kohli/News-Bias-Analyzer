@@ -64,23 +64,19 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.example.myapplication.LoadingScreen
 import com.example.myapplication.data.ViewModels.ArticlesViewModel
-import com.example.myapplication.data.fetchBiasedNews
-import com.example.myapplication.data.isArticleSaved
-import com.example.myapplication.data.removeArticle
-import com.example.myapplication.data.saveArticle
-import com.example.myapplication.data.savedArticles
+
 import com.example.myapplication.response.BiasedArticles
 
 
 @Composable
 fun ArticleScreen(
     innerPadding: PaddingValues,
-    articleId: Int,
+    articleid: String,
     articleViewModel: ArticlesViewModel,
     onBackPressed: () -> Unit
 ) {
     LaunchedEffect(Unit) {
-        articleViewModel.getArticle(articleId)
+        articleViewModel.getArticle(articleid)
     }
     val article by articleViewModel.article.collectAsState()
     val isLoading by articleViewModel.isLoadingArticle.collectAsState()
@@ -88,7 +84,7 @@ fun ArticleScreen(
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf("Article") }
     LaunchedEffect(isLoading) {
-        if (!isLoading && article!=null) articleViewModel.getBiased(articleId)
+        if (!isLoading && article!=null) articleViewModel.getBiased(articleid)
     }
     if (isLoading){
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

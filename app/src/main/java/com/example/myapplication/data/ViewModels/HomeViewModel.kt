@@ -25,6 +25,7 @@ class HomeViewModel(private val repository: CacheServerRepo): ViewModel() {
             _isLoading.value = true // <-- START loading
             try {
                 val freshNews = repository.fetchTodaysNews()
+                println(freshNews)
                 _articles.value = freshNews
             } catch (e: Exception) {
                 Log.e("HomeViewModel", "Failed to fetch news: ${e.message}")

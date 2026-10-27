@@ -25,11 +25,11 @@ class CacheServerRepo(
     private val saveddao: SavedArticleDao,
     private val searcheddao: SearchedItemsDao
 ) {
-    suspend fun fetchBiasedArticle( id: Int){
+    suspend fun fetchBiasedArticle( id: String){
         val biased = api.getBiasedNews(id)
         biaseddao.insertAll(biased)
     }
-    suspend fun returnBiasedArticle( id: Int): List<BiasedArticles> = coroutineScope{
+    suspend fun returnBiasedArticle( id: String): List<BiasedArticles> = coroutineScope{
         try {
             val biased = api.getBiasedNews(id)
             biaseddao.insertAll(biased)
@@ -140,7 +140,7 @@ class CacheServerRepo(
         }
     }
 
-    suspend fun fetchArticle(id: Int): NewsArticle?{
+    suspend fun fetchArticle(id: String): NewsArticle?{
         return newsdao.fetchArticle(id)
     }
     suspend fun getRecentSearches(): List<SearchedItems> {

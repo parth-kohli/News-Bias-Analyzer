@@ -1,12 +1,10 @@
 package com.example;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.List;
 
-@Repository
-public interface BiasedArticleRepository extends JpaRepository<BiasedArticle, Integer> {
+public interface BiasedArticleRepository
+        extends MongoRepository<BiasedArticle, String> {
 
-    //List of functions for BiasedArticles
-    List<BiasedArticle> findByArticleId(Integer articleId);
+    List<BiasedArticle> findByArticleId(String articleId);
 }

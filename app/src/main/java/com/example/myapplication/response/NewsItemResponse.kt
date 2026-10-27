@@ -1,14 +1,16 @@
 package com.example.myapplication.response
 
+import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-@androidx.room.Entity(tableName = "news_articles")
-data class NewsArticle (
-    @PrimaryKey(autoGenerate = false)
-    val id: Int,
-    val headline:String,
-    val description:String,
+@Entity(tableName = "news_articles")
+@Serializable
+data class NewsArticle(
+    @PrimaryKey
+    val id: String,
+    val headline: String,
+    val description: String,
     val article: String,
     val imageUrl: String,
     val date: String,
@@ -18,12 +20,13 @@ data class NewsArticle (
     val rightBias: Float,
     val source: String
 )
-@androidx.room.Entity(tableName = "biased_articles")
+
+@Entity(tableName = "biased_articles")
 @Serializable
 data class BiasedArticles(
-    @PrimaryKey(autoGenerate = false)
-    val id: Int,
-    val headline:String,
+    @PrimaryKey
+    val id: String,
+    val headline: String,
     val article: String,
     val description: String,
     val imageUrl: String,
@@ -33,5 +36,5 @@ data class BiasedArticles(
     val leftBias: Float,
     val rightBias: Float,
     val source: String,
-    val articleId: Int
+    val articleId: String
 )

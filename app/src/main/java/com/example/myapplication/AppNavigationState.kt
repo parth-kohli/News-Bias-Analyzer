@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,7 +11,8 @@ sealed class Screen(val route: String) {
     object Home : Screen(Routes.HOME)
     object Search : Screen(Routes.SEARCH)
     object Saved : Screen(Routes.SAVED)
-    data class Article(val articleId: Int) : Screen(Routes.ARTICLE.replace("{articleId}", "$articleId"))
+    data class Article(val articleId: String) :
+        Screen(Routes.ARTICLE.replace("{articleId}", articleId))
 }
 
 class AppNavigationState {
@@ -23,7 +25,7 @@ class AppNavigationState {
 
     //Cuurent top value (auto updates when top index is changed)
     val currentScreen: Screen?
-        @Composable get() =  derivedStateOf {
+        @SuppressLint("UnrememberedMutableState") @Composable get() =  derivedStateOf {
             if (_topIndex >= 0 && _topIndex < _backStackInternal.size) {
                 _backStackInternal[_topIndex]
             } else {

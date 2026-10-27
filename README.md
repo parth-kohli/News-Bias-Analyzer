@@ -1,0 +1,1 @@
+To run the test cases, run 'make run' on the command line.

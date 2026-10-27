@@ -24,11 +24,12 @@ class ArticlesViewModel(private val repository: CacheServerRepo) : ViewModel() {
     private val _isUpdatingSaved = MutableStateFlow(false)
     val isUpdatingSaved: StateFlow<Boolean> = _isUpdatingSaved
 
-    fun getArticle(id: Int) {
+    fun getArticle(id: String) {
         viewModelScope.launch {
             _isLoadingArticle.value = true
             try {
                 val fetchedArticle = repository.fetchArticle(id)
+                println(fetchedArticle)
                 val savedList = repository.fetchSaved()
 
                 if (fetchedArticle != null) {
@@ -48,7 +49,7 @@ class ArticlesViewModel(private val repository: CacheServerRepo) : ViewModel() {
         }
     }
 
-    fun getBiased(id: Int) {
+    fun getBiased(id: String) {
         _biasedArticles.value = emptyList()
         viewModelScope.launch {
             _isLoadingBiased.value = true
