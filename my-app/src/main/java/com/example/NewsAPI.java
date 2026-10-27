@@ -1,59 +1,126 @@
+
 package com.example;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @RestController
-@RequestMapping("/api") // All endpoints will start with /api
+@RequestMapping("/api")
 public class NewsAPI {
 
-    @Autowired
-    private NewsArticleRepository newsArticleRepository;
+    private final MongoTemplate mongoTemplate;
 
-    @Autowired
-    private BiasedArticleRepository biasedArticleRepository;
+    public NewsAPI(MongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
+    }
 
-    // Endpoint for: fetchNewsArticles()
+    // GET /api/news
+    // Fetch all main news articles.
     @GetMapping("/news")
     public List<NewsArticle> getAllNewsArticles() {
-        return newsArticleRepository.findAll();
+        Query query = new Query();
+        query.with(Sort.by(Sort.Direction.DESC, "date"));
+
+        return mongoTemplate.find(
+                query, NewsArticle.class, "NewsArticles");
     }
 
-    // Endpoint for: fetchBiasedNews(id)
+    // GET /api/news/{id}/biased
+    // Fetch related articles belonging to a main article's MongoDB ID.
     @GetMapping("/news/{id}/biased")
-    public List<BiasedArticle> getBiasedArticles(@PathVariable Integer id) {
-        return biasedArticleRepository.findByArticleId(id);
+    public List<BiasedArticle> getBiasedArticles(
+            @PathVariable String id) {
+
+        Query query = new Query(
+                Criteria.where("articleId").is(id));
+
+        query.with(Sort.by(Sort.Direction.DESC, "date"));
+
+        return mongoTemplate.find(
+                query, BiasedArticle.class, "BiasedArticles");
     }
 
-    // Endpoint for: searchNewsArticles(query)
+    // GET /api/news/search?query=election
+    // Search headline, description, and article content.
     @GetMapping("/news/search")
-    public List<NewsArticle> searchArticles(@RequestParam String query, @PageableDefault(size = 20, sort = "date", direction = Sort.Direction.DESC)
-    Pageable pageable) {
-        if (query.isBlank()) {
-            return Collections.emptyList();
+    public List<NewsArticle> searchArticles(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        if (query == null || query.isBlank()) {
+            return List.of();
         }
-        return newsArticleRepository.searchByKeyword(query, pageable);
+
+        // Prevent invalid pagination values.
+        page = Math.max(page, 0);
+        size = Math.max(1, Math.min(size, 100));
+
+        Pattern pattern = Pattern.compile(
+                Pattern.quote(query.trim()),
+                Pattern.CASE_INSENSITIVE);
+
+        Criteria keywordCriteria = new Criteria().orOperator(
+                Criteria.where("headline").regex(pattern),
+                Criteria.where("description").regex(pattern),
+                Criteria.where("article").regex(pattern)
+        );
+
+        Query searchQuery = new Query(keywordCriteria);
+        searchQuery.with(Sort.by(Sort.Direction.DESC, "date"));
+        searchQuery.skip((long) page * size);
+        searchQuery.limit(size);
+
+        return mongoTemplate.find(
+                searchQuery, NewsArticle.class, "NewsArticles");
     }
 
-    // Endpoint for: searchCategories(category)
+    // GET /api/news/category?name=Politics
+    // Fetch up to 20 articles in a category.
     @GetMapping("/news/category")
-    public List<NewsArticle> getArticlesByCategory(@RequestParam String name) {
-        return newsArticleRepository.findTop20ByCategoryIgnoreCaseOrderByDateDesc(name);
+    public List<NewsArticle> getArticlesByCategory(
+            @RequestParam String name) {
+
+        if (name == null || name.isBlank()) {
+            return List.of();
+        }
+
+        Query query = new Query(
+                Criteria.where("category")
+                        .regex("^" + Pattern.quote(name.trim()) + "$",
+                                "i"));
+
+        query.with(Sort.by(Sort.Direction.DESC, "date"));
+        query.limit(20);
+
+        return mongoTemplate.find(
+                query, NewsArticle.class, "NewsArticles");
     }
-    //Endpoint for: findArticlesByDate(today)
+
+    // GET /api/news/today
+    // Preserves the original behavior of selecting yesterday's news.
     @GetMapping("/news/today")
     public List<NewsArticle> getTodaysNews() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        String todayStr = LocalDate.now().minusDays(1).format(formatter);
-        System.out.println(todayStr);
-        return newsArticleRepository.findByDateString(todayStr);
+        String targetDate = LocalDate.now()
+                .minusDays(1)
+                .toString();
+
+        // Dates are saved as ISO strings, e.g.
+        // 2026-10-26T12:30:00Z.
+        Query query = new Query(
+                Criteria.where("date")
+                        .regex("^" + Pattern.quote(targetDate)));
+
+        query.with(Sort.by(Sort.Direction.DESC, "date"));
+
+        return mongoTemplate.find(
+                query, NewsArticle.class, "NewsArticles");
     }
 }

@@ -1,20 +1,16 @@
 package com.example;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-//data class Biased Articles with getter and setter functions
-@Entity
-@Table(name = "BiasedArticles")
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Document(collection = "BiasedArticles")
 public class BiasedArticle {
 
     @Id
-    private Integer id;
+    private String id;
+
     private String headline;
-    @Column(columnDefinition = "TEXT")
     private String article;
-    @Column(columnDefinition = "TEXT")
     private String description;
     private String imageUrl;
     private String date;
@@ -23,10 +19,10 @@ public class BiasedArticle {
     private Float leftBias;
     private Float rightBias;
     private String source;
-    private Integer articleId;
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    private String articleId;
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     public String getHeadline() { return headline; }
     public void setHeadline(String headline) { this.headline = headline; }
     public String getArticle() { return article; }
@@ -47,6 +43,6 @@ public class BiasedArticle {
     public void setRightBias(Float rightBias) { this.rightBias = rightBias; }
     public String getSource() { return source; }
     public void setSource(String source) { this.source = source; }
-    public Integer getArticleId() { return articleId; }
-    public void setArticleId(Integer articleId) { this.articleId = articleId; }
+    public String getArticleId() { return articleId; }
+    public void setArticleId(String articleId) { this.articleId = articleId; }
 }

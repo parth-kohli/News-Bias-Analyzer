@@ -23,15 +23,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.LoadingScreen
 import com.example.myapplication.data.ViewModels.SavedViewModel
-import com.example.myapplication.data.getSavedArticles
-import com.example.myapplication.data.savedArticles
+
 import com.example.myapplication.response.NewsArticle
 
 @Composable
 fun SavedScreen(
     innerPadding: PaddingValues,
     savedViewModel: SavedViewModel,
-    onArticleClick: (Int) -> Unit
+    onArticleClick: (String) -> Unit
 ) {
     val savedArticles by savedViewModel.articles.collectAsState()
     val isLoading by savedViewModel.isLoading.collectAsState()

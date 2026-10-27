@@ -62,7 +62,6 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.LoadingScreen
 import com.example.myapplication.data.ViewModels.HomeViewModel
-import com.example.myapplication.data.fetchNewsArticles
 import com.example.myapplication.response.NewsArticle
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -74,7 +73,7 @@ import kotlin.math.min
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn
 @Composable
-fun HomeScreen(innerPadding: PaddingValues, homeViewModel: HomeViewModel, onStart: MutableState<Boolean>, onArticleClick: (Int)->Unit){
+fun HomeScreen(innerPadding: PaddingValues, homeViewModel: HomeViewModel, onStart: MutableState<Boolean>, onArticleClick: (String)->Unit){
     val newsArticles by homeViewModel.articles.collectAsState()
     val isLoading by homeViewModel.isLoading.collectAsState()
     LaunchedEffect(Unit) {
@@ -129,7 +128,7 @@ fun HomeScreen(innerPadding: PaddingValues, homeViewModel: HomeViewModel, onStar
 
 }
 @Composable
-fun NewsBlock(newsArticle: NewsArticle, onArticleClick: (Int) -> Unit, saved: Boolean = false){
+fun NewsBlock(newsArticle: NewsArticle, onArticleClick: (String) -> Unit, saved: Boolean = false){
     Spacer(modifier = Modifier.height(15.dp))
     Box(
         modifier = Modifier
@@ -208,7 +207,7 @@ fun NewsBlock(newsArticle: NewsArticle, onArticleClick: (Int) -> Unit, saved: Bo
 }
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun StackedGlassCarousel(items: List<NewsArticle>, onArticleClick: (Int) -> Unit) {
+fun StackedGlassCarousel(items: List<NewsArticle>, onArticleClick: (String) -> Unit) {
     val pagerState = rememberPagerState()
 
     HorizontalPager(

@@ -69,7 +69,7 @@ enum class SearchState {
  */
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun SearchScreen(innerPadding: PaddingValues, searchViewModel: SearchViewModel, onBackPressed: () -> Unit, onArticleClick: (Int) -> Unit) {
+fun SearchScreen(innerPadding: PaddingValues, searchViewModel: SearchViewModel, onBackPressed: () -> Unit, onArticleClick: (String) -> Unit) {
     val results= searchViewModel.articles.collectAsState()
     val isLoading = searchViewModel.isLoading.collectAsState()
     val query = remember { mutableStateOf("") }
@@ -102,7 +102,7 @@ fun SearchScreen(innerPadding: PaddingValues, searchViewModel: SearchViewModel, 
             query.value = ""
         } else if (searchState.value == SearchState.ACTIVE) {
             recentSearches.clear()
-            recentSearches.addAll(getCachedSearchResults())
+
         }
     }
     BackHandler {

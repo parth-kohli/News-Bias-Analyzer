@@ -12,7 +12,7 @@ interface NewsApiService {
     suspend fun getAllNews(): List<NewsArticle>
 
     @GET("api/news/{id}/biased")
-    suspend fun getBiasedNews(@Path("id") id: Int): List<BiasedArticles>
+    suspend fun getBiasedNews(@Path("id") id: String): List<BiasedArticles>
 
     @GET("api/news/search")
     suspend fun searchNews(@Query("query") query: String, @Query("page")page: Int): List<NewsArticle>

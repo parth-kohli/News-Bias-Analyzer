@@ -1,129 +1,177 @@
+
 package com.example;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
-import java.sql.Types;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.data.mongodb.core.MongoTemplate;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Scanner;
 
 public class InsertClustersIntoDB {
 
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/News?useSSL=false&allowPublicKeyRetrieval=true";
-    private static final String DB_USER = "root";
-    private static  String DB_PASS ;
-
-    private static final String SQL_INSERT_NEWS_ARTICLE =
-            "INSERT INTO NewsArticles (headline, description, article, imageUrl, date, category, centerBias, leftBias, rightBias, source) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-    private static final String SQL_INSERT_BIASED_ARTICLE =
-            "INSERT INTO BiasedArticles (headline, article, description, imageUrl, date, category, centerBias, leftBias, rightBias, source, articleId) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
     public static void main(String[] args) {
-        try {
-            System.out.println("Enter DB password: ");
-            Scanner scanner = new Scanner(System.in);
-            DB_PASS=scanner.nextLine();
+        try (ConfigurableApplicationContext context =
+                     new SpringApplicationBuilder(NewsAPIApplication.class)
+                             .web(WebApplicationType.NONE)
+                             .run(args)) {
+
+            MongoTemplate mongoTemplate = context.getBean(MongoTemplate.class);
+
+            System.out.println("Training bias classification models...");
             ModelTrainer.TrainedModels trainedModels = ModelTrainer.trainModels();
-            List<List<Article>> clusters = fetchMultipleArticles.fetchAndClusterArticles(trainedModels);//Returns clusters of articles
-            try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS)) {
-                conn.setAutoCommit(false);
-                insertClusters(conn, clusters);
-                conn.commit();
-            }
 
-        } catch (SQLException e) {
-            System.err.println("Database connection or transaction failed.");
-            e.printStackTrace();
+            System.out.println("Fetching and clustering articles...");
+            List<List<Article>> clusters =
+                    fetchMultipleArticles.fetchAndClusterArticles(trainedModels);
+
+            insertClusters(mongoTemplate, clusters);
+
+            System.out.println("Finished saving article clusters to MongoDB.");
+
         } catch (Exception e) {
-            System.err.println("An unexpected error occurred during the pipeline.");
+            System.err.println("Article pipeline failed.");
             e.printStackTrace();
         }
     }
 
-    private static void insertClusters(Connection conn, List<List<Article>> clusters) throws SQLException {
-        try (PreparedStatement psNews = conn.prepareStatement(SQL_INSERT_NEWS_ARTICLE, Statement.RETURN_GENERATED_KEYS);
-             PreparedStatement psBiased = conn.prepareStatement(SQL_INSERT_BIASED_ARTICLE)) {
+    private static void insertClusters(
+            MongoTemplate mongoTemplate,
+            List<List<Article>> clusters) {
 
-            int eventCounter = 1;
-            for (List<Article> cluster : clusters) {
-                if (cluster.isEmpty()) continue;
+        int eventCounter = 1;
 
-                Article mainArticle = cluster.get(0);
+        for (List<Article> cluster : clusters) {
+            if (cluster == null || cluster.isEmpty()) {
+                continue;
+            }
 
-                System.out.printf("\nInserting Event #%d: '%s'\n", eventCounter++, mainArticle.title);
-                System.out.printf("   -> Scores: [L:%.2f, C:%.2f, R:%.2f]\n",
-                    mainArticle.leftBias, mainArticle.centerBias, mainArticle.rightBias);
-                setStatementParams(psNews, mainArticle); //insert the values required for the NewsArticles table
-                psNews.executeUpdate();
-                int mainArticleId = -1;
-                try (ResultSet generatedKeys = psNews.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        mainArticleId = generatedKeys.getInt(1); //gets the id from NewsArticles table
-                    } else {
-                        throw new SQLException("Creating news article failed, no ID obtained.");
-                    }
-                }
-                //Placing the rest of the articles in the biasedArticle DB
-                for (int i = 1; i < cluster.size(); i++) {
-                    Article biasedArticle = cluster.get(i);
-                    setStatementParams(psBiased, biasedArticle);
-                    psBiased.setInt(11, mainArticleId); 
-                    psBiased.executeUpdate();
-                }
-                System.out.println("   -> Saved " + (cluster.size() - 1) + " related (biased) articles.");
+            Article mainArticle = cluster.get(0);
+
+            // Convert the main article into the MongoDB document model.
+            NewsArticle newsArticle = createNewsArticle(mainArticle);
+
+            // Save it first so MongoDB generates its ID.
+            mongoTemplate.save(newsArticle, "NewsArticles");
+
+            String mainArticleId = newsArticle.getId();
+
+            if (mainArticleId == null || mainArticleId.isBlank()) {
+                throw new IllegalStateException(
+                        "MongoDB did not generate an ID for the main article.");
+            }
+
+            System.out.printf(
+                    "%nSaved Event #%d: '%s'%n",
+                    eventCounter++, mainArticle.title);
+
+            System.out.printf(
+                    "   -> Scores: [L:%.2f, C:%.2f, R:%.2f]%n",
+                    mainArticle.leftBias,
+                    mainArticle.centerBias,
+                    mainArticle.rightBias);
+
+            int savedRelatedArticles = 0;
+
+            // Save the remaining articles as related/biased articles.
+            for (int i = 1; i < cluster.size(); i++) {
+                Article article = cluster.get(i);
+
+                BiasedArticle biasedArticle = createBiasedArticle(article);
+
+                // Link this article to its main article using the MongoDB ID.
+                biasedArticle.setArticleId(mainArticleId);
+
+                mongoTemplate.save(biasedArticle, "BiasedArticles");
+                savedRelatedArticles++;
+            }
+
+            System.out.println(
+                    "   -> Saved " + savedRelatedArticles
+                            + " related (biased) articles.");
+        }
+    }
+
+    private static NewsArticle createNewsArticle(Article article) {
+        NewsArticle document = new NewsArticle();
+
+        document.setHeadline(clean(article.title));
+        document.setDescription(clean(article.description));
+        document.setArticle(getContent(article));
+        document.setImageUrl(clean(article.imageUrl));
+        document.setDate(normalizeDate(article.publishedAt));
+        document.setCategory(getCategory(article.category));
+        document.setCenterBias(article.centerBias);
+        document.setLeftBias(article.leftBias);
+        document.setRightBias(article.rightBias);
+        document.setSource(clean(article.sourceName));
+
+        return document;
+    }
+
+    private static BiasedArticle createBiasedArticle(Article article) {
+        BiasedArticle document = new BiasedArticle();
+
+        document.setHeadline(clean(article.title));
+        document.setArticle(getContent(article));
+        document.setDescription(clean(article.description));
+        document.setImageUrl(clean(article.imageUrl));
+        document.setDate(normalizeDate(article.publishedAt));
+        document.setCategory(getCategory(article.category));
+        document.setCenterBias(article.centerBias);
+        document.setLeftBias(article.leftBias);
+        document.setRightBias(article.rightBias);
+        document.setSource(clean(article.sourceName));
+
+        return document;
+    }
+
+    private static String getContent(Article article) {
+        String content = clean(article.content);
+
+        return content == null
+                ? "No content snippet available."
+                : content;
+    }
+
+    private static String getCategory(String category) {
+        String value = clean(category);
+        return value == null ? "General" : value;
+    }
+
+    private static String clean(String value) {
+        if (value == null || value.isBlank()
+                || value.trim().equalsIgnoreCase("null")) {
+            return null;
+        }
+
+        return value.trim();
+    }
+
+    private static String normalizeDate(String publishedAt) {
+        if (publishedAt == null || publishedAt.isBlank()
+                || publishedAt.trim().equalsIgnoreCase("null")) {
+            return null;
+        }
+
+        try {
+            // NewsAPI normally supplies an ISO date-time with an offset.
+            return OffsetDateTime.parse(
+                    publishedAt,
+                    DateTimeFormatter.ISO_DATE_TIME
+            ).toInstant().toString();
+
+        } catch (Exception ignored) {
+            try {
+                return Instant.parse(publishedAt).toString();
+            } catch (Exception e) {
+                System.err.println(
+                        "Could not parse article date: " + publishedAt);
+                return publishedAt;
             }
         }
-    }
-
-
-    private static void setNullableString(PreparedStatement ps, int index, String value) throws SQLException {
-        if (value != null && !value.isBlank() && !value.equals("null")) {
-            ps.setString(index, value);
-        } else {
-            ps.setNull(index, Types.VARCHAR);
-        }
-    }
-
-    private static void setNullableFloat(PreparedStatement ps, int index, Float value) throws SQLException {
-        if (value != null) {
-            ps.setFloat(index, value);
-        } else {
-            ps.setNull(index, Types.FLOAT);
-        }
-    }
-    //For placing the required values in the insert statement
-    private static void setStatementParams(PreparedStatement ps, Article article) throws SQLException {
-        ps.setString(1, article.title);
-        setNullableString(ps, 2, article.description);
-
-        if (article.content != null && !article.content.isBlank() && !article.content.equals("null")) {
-            ps.setString(3, article.content);
-        } else {
-            ps.setString(3, "No content snippet available.");
-        }
-
-        setNullableString(ps, 4, article.imageUrl);
-        ZonedDateTime zdt = ZonedDateTime.parse(article.publishedAt, DateTimeFormatter.ISO_DATE_TIME);
-        LocalDateTime ldt = zdt.withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
-        ps.setTimestamp(5, Timestamp.valueOf(ldt));
-        setNullableString(ps, 6, "General");
-        setNullableFloat(ps, 7, article.centerBias);
-        setNullableFloat(ps, 8, article.leftBias);
-        setNullableFloat(ps, 9, article.rightBias);
-        setNullableString(ps, 10, article.sourceName);
     }
 }
-
-
-
